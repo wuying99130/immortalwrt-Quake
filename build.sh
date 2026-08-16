@@ -88,19 +88,11 @@ else
     echo "⚠️  patch-dts.sh 未找到: $DTS_PATCH"
 fi
 
-# ---------- 6. 编译 ----------
+# ---------- 6. 编译（单线程，避免 OOM）----------
 echo "=== 开始编译 ==="
-make -j$(nproc) V=s
+make -j1 V=s 2>&1 | tee build.log
 
 # ---------- 7. 收集产物 ----------
 echo "=== 收集固件 ==="
 mkdir -p "$OUTPUT_DIR"
-cp bin/targets/sunxi/cortexa7/*sdcard* "$OUTPUT_DIR/" 2>/dev/null || true
-cp bin/targets/sunxi/cortexa7/*.img.gz "$OUTPUT_DIR/" 2>/dev/null || true
-
-echo ""
-echo "=========================================="
-echo "  编译完成！"
-echo "  固件目录: $OUTPUT_DIR"
-echo "=========================================="
-ls -lh "$OUTPUT_DIR/"
+cp bin/targets/sunxi/cortexa7/*sdcard* "$OUTPUT_DIR/" 2>/dev/null || tr
