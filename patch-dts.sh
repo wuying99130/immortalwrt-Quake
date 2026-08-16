@@ -1,12 +1,11 @@
 #!/bin/bash
 set -e
 
-echo "=== 查找/创建 NanoPi R1S DTS 文件 ==="
+echo "=== 查找/创建 NanoPi R1S-H3 DTS 文件 ==="
 
 DTS_DIR="target/linux/sunxi/dts"
 DTS_FILE="${DTS_DIR}/sun8i-h3-nanopi-r1s-h3.dts"
 
-# 如果 DTS 文件不存在，创建一个
 if [ ! -f "$DTS_FILE" ]; then
     echo "=== DTS 文件不存在，正在创建 ==="
     mkdir -p "$DTS_DIR"
@@ -91,10 +90,9 @@ else
     echo "=== DTS 文件已存在 ==="
 fi
 
-# 确保 Makefile 里有对应条目
 MAKEFILE="target/linux/sunxi/image/cortex-a7.mk"
 if ! grep -q "nanopi-r1s-h3" "$MAKEFILE" 2>/dev/null; then
-    echo "=== 添加 R1S 到 Makefile ==="
+    echo "=== 添加 NanoPi R1S-H3 到 Makefile ==="
     cat >> "$MAKEFILE" << 'MK_EOF'
 
 define Device/friendlyarm_nanopi-r1s-h3
