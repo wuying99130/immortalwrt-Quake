@@ -9,7 +9,7 @@ set -e
 REPO_URL="https://github.com/immortalwrt/immortalwrt"
 BRANCH="openwrt-24.10"
 BUILD_ROOT="$PWD/immortalwrt"
-WORK_DIR="$PWD"              # immortalwrt-Quake 目录
+WORK_DIR="$PWD"
 OUTPUT_DIR="$WORK_DIR/firmware-24.10-$(date +%Y%m%d)"
 
 # ---------- 1. 克隆源码 ----------
@@ -95,4 +95,12 @@ make -j1 V=s 2>&1 | tee build.log
 # ---------- 7. 收集产物 ----------
 echo "=== 收集固件 ==="
 mkdir -p "$OUTPUT_DIR"
-cp bin/targets/sunxi/cortexa7/*sdcard* "$OUTPUT_DIR/" 2>/dev/null || tr
+cp bin/targets/sunxi/cortexa7/*sdcard* "$OUTPUT_DIR/" 2>/dev/null || true
+cp bin/targets/sunxi/cortexa7/*.img.gz "$OUTPUT_DIR/" 2>/dev/null || true
+
+echo ""
+echo "=========================================="
+echo "  编译完成！"
+echo "  固件目录: $OUTPUT_DIR"
+echo "=========================================="
+ls -lh "$OUTPUT_DIR/"
