@@ -2,25 +2,44 @@ name: Build ImmortalWrt for NanoPi R1S-H3
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '0 0 * * 0'
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 512
+          temp-reserve-mb: 128
+          remove-dotnet: 'true'
+          remove-android: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
+          remove-docker-images: 'true'
+
+      - name: Checkout your repo
         uses: actions/checkout@v4
 
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y build-essential gcc g++ binutils bzip2 flex python3 \
-            perl make grep unzip gzip bison patch file wget cpio rsync git \
-            libncurses-dev zlib1g-dev libssl-dev gawk gettext ccache ecj \
-            fastjar java-propose-classpath libelf-dev bc time
+          sudo apt install -y build-essential clang flex bison g++ gawk \
+          gcc-multilib g++-multilib gettext git libncurses5-dev libssl-dev \
+          python3 python3-distutils python3-setuptools rsync swig unzip \
+          zlib1g-dev file wget
 
       - name: Clone ImmortalWrt
         run: |
-          git clone --depth=1 -b openwrt-24.10 https://github.com/immortalwrt/immortalwrt.git
+          git clone https://github.com/immortalwrt/immortalwrt.git immortalwrt
+          cd immortalwrt
+          git checkout v23.05.4
 
       - name: Update feeds
         run: |
@@ -28,46 +47,24 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: Patch DTS for NanoPi R1S-H3
-        run: |
-          cd immortalwrt
-          echo "=== Listing sunxi target directory structure ==="
-          find target/linux/sunxi -maxdepth 3 -type d 2>/dev/null || true
-          echo ""
-          echo "=== Searching for nanopi DTS files ==="
-          DTS_FILE=$(find target/linux/sunxi -name "*nanopi*" -name "*.dts" 2>/dev/null | head -1)
-          echo "DTS_FILE=$DTS_FILE"
-          if [ -n "$DTS_FILE" ]; then
-            echo "=== Patching: $DTS_FILE ==="
-            sed -i '/&mmc2/,/};/s/status = "disabled";/status = "okay";/' "$DTS_FILE" || true
-            grep -n "status" "$DTS_FILE" || true
-          else
-            echo "No nanopi DTS found, nothing to patch. Continuing..."
-          fi
-
       - name: Apply custom patches
         run: |
-          bash patch-dts.sh
-          cp patch-dts.sh immortalwrt/
-        working-directory: ${{ github.workspace }}
+          bash .github/patch-dts.sh
+          cp .github/patch-dts.sh immortalwrt/
 
-      - name: Generate config
+      - name: Load config
         run: |
+          cp .github/config.seed immortalwrt/.config
           cd immortalwrt
           make defconfig
-          echo "CONFIG_TARGET_sunxi=y" >> .config
-          echo "CONFIG_TARGET_sunxi_cortexa8=y" >> .config
-          echo "CONFIG_TARGET_sunxi_cortexa8_DEVICE_cubietech_nanopi-r1s-h3=y" >> .config
-          make defconfig
 
-      - name: Build firmware
+      - name: Compile
         run: |
           cd immortalwrt
           make -j$(nproc) V=s
 
-      - name: Upload artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: immortalwrt-sunxi-r1s-h3
-          path: immortalwrt/bin/targets/sunxi/cortexa8/*r1s*.*
-          retention-days: 7
+          name: nanopi-r1s-h3-firmware
+          path: immortalwrt/bin/targets/sunxi/cortexa7/
