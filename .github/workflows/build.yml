@@ -36,7 +36,7 @@ jobs:
           zlib1g-dev file wget
 
       - name: Run build
-        run: bash .github/build.sh
+        run: bash build.sh
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
