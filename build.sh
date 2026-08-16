@@ -90,7 +90,16 @@ fi
 
 # ---------- 6. 编译 ----------
 echo "=== 开始编译 ==="
-make -j8 V=s
+set +e
+make -j8 2>&1 | grep -E "error:|warning:|Error|make\[" || true
+MAKE_EXIT=${PIPESTATUS[0]}
+set -e
+
+if [ $MAKE_EXIT -ne 0 ]; then
+    echo "=== 编译失败，输出详细日志 ==="
+    make -j1 V=s
+    exit 1
+fi
 
 # ---------- 7. 收集产物 ----------
 echo "=== 收集固件 ==="
