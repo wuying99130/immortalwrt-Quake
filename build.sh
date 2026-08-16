@@ -49,7 +49,7 @@ make defconfig
 
 # 调用 DTS 补丁脚本
 echo "=== 应用 DTS 补丁 ==="
-bash ../.github/patch-dts.sh
+bash target/linux/sunxi/patch-dts.sh
 
 # 下载所有源码包
 echo "=== 下载源码包 ==="
