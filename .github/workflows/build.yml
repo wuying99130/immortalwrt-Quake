@@ -7,6 +7,9 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Install dependencies
         run: |
           sudo apt update
@@ -18,7 +21,6 @@ jobs:
       - name: Clone ImmortalWrt
         run: |
           git clone --depth=1 -b openwrt-24.10 https://github.com/immortalwrt/immortalwrt.git
-          cd immortalwrt
 
       - name: Update feeds
         run: |
@@ -45,8 +47,9 @@ jobs:
 
       - name: Apply custom patches
         run: |
-          cd immortalwrt
-          bash ../patch-dts.sh
+          bash patch-dts.sh
+          cp patch-dts.sh immortalwrt/
+        working-directory: ${{ github.workspace }}
 
       - name: Generate config
         run: |
