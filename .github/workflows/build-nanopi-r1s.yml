@@ -1,0 +1,105 @@
+name: Build NanoPi R1S-H3 ImmortalWrt
+
+on:
+  workflow_dispatch:  # 手动触发
+  # push:
+  #   branches: [ openwrt-24.10 ]
+
+env:
+  REPO_URL: https://github.com/immortalwrt/immortalwrt
+  REPO_BRANCH: openwrt-24.10
+  REPO_TAG: v24.10.6
+  TARGET: sunxi/cortexa7
+  DEVICE: friendlyarm_nanopi-r1s-h3
+  HOSTNAME: nanopi-r1
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ---------- 1. 拉取源码 ----------
+      - name: Clone ImmortalWrt source
+        run: |
+          git clone $REPO_URL -b $REPO_BRANCH --single-branch --depth 1 openwrt
+          cd openwrt
+          git fetch --tags
+          git checkout $REPO_TAG
+
+      # ---------- 2. 打入设备补丁 ----------
+      - name: Apply device patch
+        run: |
+          cp $GITHUB_WORKSPACE/diy/nanopi-r1s-h3.patch openwrt/
+          cd openwrt
+          git apply --check nanopi-r1s-h3.patch && git apply nanopi-r1s-h3.patch || echo "Patch check done"
+
+      # ---------- 3. 更新 Feeds ----------
+      - name: Update feeds
+        run: |
+          cd openwrt
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      # ---------- 4. 应用 diffconfig ----------
+      - name: Apply diffconfig
+        run: |
+          cp $GITHUB_WORKSPACE/diy/diffconfig openwrt/.config
+          cd openwrt
+          make defconfig
+
+      # ---------- 5. 下载编译缓存 ----------
+      - name: Cache build
+        uses: actions/cache@v4
+        with:
+          path: |
+            openwrt/dl
+            openwrt/build_dir
+            openwrt/staging_dir
+          key: ${{ runner.os }}-nanopi-r1s-${{ env.REPO_TAG }}-${{ hashFiles('openwrt/.config') }}
+
+      # ---------- 6. 编译 ----------
+      - name: Compile
+        run: |
+          cd openwrt
+          make -j$(nproc) || make -j1 V=s  # 失败后单线程重试以便排错
+
+      # ---------- 7. 命名并打包 ----------
+      - name: Rename and package
+        run: |
+          BUILD_DATE=$(date +%Y%m%d)
+          cd openwrt/bin/targets/${{ env.TARGET }}
+          
+          # sdcard squashfs
+          IMG_FILE=$(ls *squashfs-sdcard.img.gz 2>/dev/null | head -1)
+          if [ -n "$IMG_FILE" ]; then
+            cp "$IMG_FILE" "$GITHUB_WORKSPACE/immortalwrt-24.10.6-nanopi-r1s-h3-${BUILD_DATE}-squashfs-sdcard.img.gz"
+          fi
+          
+          # sdcard ext4
+          EXT4_FILE=$(ls *ext4-sdcard.img.gz 2>/dev/null | head -1)
+          if [ -n "$EXT4_FILE" ]; then
+            cp "$EXT4_FILE" "$GITHUB_WORKSPACE/immortalwrt-24.10.6-nanopi-r1s-h3-${BUILD_DATE}-ext4-sdcard.img.gz"
+          fi
+          
+          # rootfs tar.gz (Docker用)
+          TAR_FILE=$(ls *rootfs.tar.gz 2>/dev/null | head -1)
+          if [ -n "$TAR_FILE" ]; then
+            cp "$TAR_FILE" "$GITHUB_WORKSPACE/immortalwrt-24.10.6-nanopi-r1s-h3-${BUILD_DATE}-rootfs.tar.gz"
+          fi
+          
+          ls -lh $GITHUB_WORKSPACE/
+
+      # ---------- 8. 上传 Artifact ----------
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: immortalwrt-nanopi-r1s-h3-${{ github.run_id }}
+          path: |
+            *.img.gz
+            *.tar.gz
+          retention-days: 30
