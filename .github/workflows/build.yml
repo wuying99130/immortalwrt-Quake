@@ -1,0 +1,93 @@
+name: Build ImmortalWrt for NanoPi R1S-H3
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout ImmortalWrt
+        uses: actions/checkout@v4
+        with:
+          repository: immortalwrt/immortalwrt
+          ref: openwrt-24.10
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang flex bison gawk g++-multilib \
+            gettext git libncurses5-dev libssl-dev python3-distutils rsync unzip zlib1g-dev \
+            file wget swig libelf-dev libgmp-dev libltdl-dev libmpc-dev libmpfr-dev \
+            libtool ninja-build p7zip p7zip-full qemu-utils u-boot-tools upx-ucl xxd
+
+      - name: Update Feeds
+        run: |
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Write Config
+        run: |
+          cat > .config << 'EOF'
+          CONFIG_TARGET_sunxi=y
+          CONFIG_TARGET_sunxi_cortexa7=y
+          CONFIG_TARGET_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1s-h3=y
+          CONFIG_TARGET_ROOTFS_SQUASHFS=y
+
+          # 基础包
+          CONFIG_PACKAGE_block-mount=y
+          CONFIG_PACKAGE_coreutils=y
+          CONFIG_PACKAGE_kmod-usb-net=y
+          CONFIG_PACKAGE_kmod-usb-net-rtl8152=y
+
+          # 博通 BCM43430 SDIO WiFi
+          CONFIG_PACKAGE_kmod-brcmfmac=y
+          CONFIG_PACKAGE_cypress-firmware-43430-sdio=y
+
+          # 无线工具
+          CONFIG_PACKAGE_iw=y
+          CONFIG_PACKAGE_iwinfo=y
+          CONFIG_PACKAGE_wpad-basic-mbedtls=y
+
+          # LuCI 中文
+          CONFIG_PACKAGE_luci=y
+          CONFIG_LUCI_LANG_zh_Hans=y
+          EOF
+          make defconfig
+
+      - name: Fix DTS for SDIO WiFi
+        run: |
+          DTS_FILE=$(find target/linux/sunxi/dts* -name "*nanopi*r1s*" -name "*.dts" | head -1)
+          if [ -n "$DTS_FILE" ]; then
+            echo "=== Patching: $DTS_FILE ==="
+            sed -i '/&mmc2/,/};/s/status = "disabled";/status = "okay";/' "$DTS_FILE"
+            grep -n "status" "$DTS_FILE" | grep -A1 -B1 mmc2 || true
+          else
+            echo "ERROR: DTS file not found, listing all sunxi dts:"
+            find target/linux/sunxi/ -name "*.dts" | grep -i nanopi
+          fi
+
+      - name: Download Sources
+        run: |
+          make download -j8
+          find dl -size -1024c -exec rm -f {} \;
+
+      - name: Compile
+        run: |
+          make -j$(nproc) || make -j1 V=s
+
+      - name: Collect Artifacts
+        run: |
+          mkdir -p out
+          find bin/targets/sunxi/cortexa7/ -maxdepth 1 -type f \( -name "*.img.gz" -o -name "sha256sums" -o -name "*-manifest" \) -exec cp -f {} out/ \;
+          ls -lh out/
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: ImmortalWrt-NanoPi-R1S-H3
+          path: out/*
