@@ -1,0 +1,73 @@
+# ==================== Target ====================
+CONFIG_TARGET_sunxi=y
+CONFIG_TARGET_sunxi_cortexa7=y
+CONFIG_TARGET_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1s-h3=y
+
+# ==================== 输出格式 ====================
+CONFIG_TARGET_ROOTFS_SQUASHFS=y
+CONFIG_TARGET_ROOTFS_TARGZ=y
+CONFIG_TARGET_IMAGES_GZIP=y
+CONFIG_GRUB_IMAGES=y
+CONFIG_TARGET_IMAGES_GZIP=y
+
+# ==================== 基础包 ====================
+CONFIG_PACKAGE_kmod-rtl8152=y           # RTL8153B USB网卡 (LAN)
+CONFIG_PACKAGE_kmod-usb-net=y
+CONFIG_PACKAGE_kmod-usb-net-rtl8152=y
+CONFIG_PACKAGE_kmod-usb-storage=y
+CONFIG_PACKAGE_kmod-usb-storage-extras=y
+CONFIG_PACKAGE_kmod-usb2=y
+CONFIG_PACKAGE_kmod-usb3=y
+CONFIG_PACKAGE_kmod-fs-ext4=y
+CONFIG_PACKAGE_kmod-fs-vfat=y
+CONFIG_PACKAGE_kmod-fs-ntfs=y
+CONFIG_PACKAGE_kmod-nls-cp437=y
+CONFIG_PACKAGE_kmod-nls-iso8859-1=y
+CONFIG_PACKAGE_kmod-nls-utf8=y
+
+# ==================== WiFi - RTL8189ETV ====================
+CONFIG_PACKAGE_kmod-cfg80211=y
+CONFIG_PACKAGE_kmod-mac80211=y
+CONFIG_PACKAGE_kmod-rtl8xxxu=n
+CONFIG_PACKAGE_kmod-rtlwifi=y
+CONFIG_PACKAGE_kmod-rtlwifi-usb=n
+CONFIG_PACKAGE_hostapd=y
+CONFIG_PACKAGE_hostapd-utils=y
+CONFIG_PACKAGE_wpa-supplicant=y
+CONFIG_PACKAGE_wpad-basic=y
+CONFIG_PACKAGE_iw=y
+CONFIG_PACKAGE_wireless-tools=y
+CONFIG_PACKAGE_relayd=y
+
+# ==================== 网络工具 ====================
+CONFIG_PACKAGE_kmod-bridge=y
+CONFIG_PACKAGE_kmod-ipt-nat=y
+CONFIG_PACKAGE_kmod-nf-nat=y
+CONFIG_PACKAGE_iptables=y
+CONFIG_PACKAGE_dnsmasq-full=y
+CONFIG_PACKAGE_odhcpd=y
+CONFIG_PACKAGE_odhcp6c=y
+CONFIG_PACKAGE_ppp=y
+CONFIG_PACKAGE_pppoe=y
+
+# ==================== mDNS 设备名 ====================
+CONFIG_PACKAGE_umdns=y
+CONFIG_PACKAGE_avahi-dbus-daemon=n
+
+# ==================== 中文界面 ====================
+CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
+
+# ==================== 工具 ====================
+CONFIG_PACKAGE_bash=y
+CONFIG_PACKAGE_curl=y
+CONFIG_PACKAGE_wget=y
+CONFIG_PACKAGE_coreutils=y
+CONFIG_PACKAGE_block-mount=y
+CONFIG_PACKAGE_fdisk=y
+CONFIG_PACKAGE_lsblk=y
+CONFIG_PACKAGE_usbutils=y
+
+# ==================== 系统配置 ====================
+CONFIG_VERSION_REPO="https://downloads.immortalwrt.org/releases/24.10.6"
+CONFIG_VERSION_DIST="ImmortalWrt"
+CONFIG_VERSION_NUMBER="24.10.6"
