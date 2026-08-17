@@ -1,7 +1,18 @@
 #!/bin/bash
 set -e
 
-# ... 前面的变量声明保持不变 ...
+# ==========================================
+#  ImmortalWrt NanoPi R1S-H3 编译脚本
+#  用于 GitHub Actions 云端编译
+# ==========================================
+
+EXTRA_PACKAGES="$1"
+
+TARGET="sunxi/cortexa7"
+DEVICE="friendlyarm_nanopi-r1s-h3"
+DATE_ONLY=$(date +%Y%m%d)
+BUILD_TIME=$(date '+%Y-%m-%d %H:%M:%S')
+OUTPUT_DIR="/tmp/immortalwrt/firmware-${DATE_ONLY}"
 
 cd /tmp/immortalwrt
 
@@ -13,8 +24,8 @@ else
     echo "警告: 找不到 patch-dts.sh，跳过 DTS 安装"
 fi
 
-
 # ---------- 更新 feeds ----------
+
 echo ">>> 更新 feeds"
 ./scripts/feeds update -a
 ./scripts/feeds install -a
