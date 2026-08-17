@@ -62,16 +62,56 @@ endef
 $(eval $(call BuildPackage,rpcd-mod-rad3-enc))
 MAKEFILE_EOF
 
-# ---------- 4. 应用 DTS 补丁 ----------
-echo "=== 步骤 4/7：应用 DTS 补丁 ==="
-DTS_PATCH="$WORK_DIR/patch-dts.sh"
-if [ -f "$DTS_PATCH" ]; then
-    bash "$DTS_PATCH"
-    echo "✅ DTS 补丁已应用"
-else
-    echo "❌ patch-dts.sh 未找到: $DTS_PATCH"
-    exit 1
-fi
+# 步骤4：诊断 .dts 结构
+echo "=========================================="
+echo "诊断 .dts 结构"
+echo "=========================================="
+
+# 找到所有 .dts
+echo ""
+echo ">>> 所有 .dts 文件："
+find . -name "*.dts" -type f 2>/dev/null | sort
+
+# 找到所有 .dtsi
+echo ""
+echo ">>> 所有 .dtsi 文件："
+find . -name "*.dtsi" -type f 2>/dev/null | sort
+
+# 关键：target/linux/mediatek 下的 dts 文件
+echo ""
+echo ">>> target/linux/mediatek 结构："
+find target/linux/mediatek -name "*.dts" -o -name "*.dtsi" 2>/dev/null | sort
+
+# 最关键的：看看有没有 mt7981-cmcc_rax3000m 相关
+echo ""
+echo ">>> 包含 rax3000m 的文件："
+find . -name "*rax3000m*" 2>/dev/null
+
+# 如果上面的找不到，搜 cmcc
+echo ""
+echo ">>> 包含 cmcc 的文件："
+find . -name "*cmcc*" 2>/dev/null
+
+# 列出 mediatek/filogic 目录结构
+echo ""
+echo ">>> target/linux/mediatek/filogic 目录："
+ls -la target/linux/mediatek/filogic/ 2>/dev/null || echo "目录不存在"
+ls -la target/linux/mediatek/filogic/base-files/etc/board.d/ 2>/dev/null || echo "子目录不存在"
+
+# 看看 generic 目录
+echo ""
+echo ">>> target/linux/mediatek/files/ 目录："
+ls -la target/linux/mediatek/files/ 2>/dev/null || echo "目录不存在"
+
+# 检查已经存在的自定义 dts
+echo ""
+echo ">>> 自定义 dts 目录："
+ls -la files/etc/ 2>/dev/null || echo "files/etc/ 不存在"
+
+echo ""
+echo "=========================================="
+echo "诊断完成"
+echo "=========================================="
 
 # ---------- 5. 生成完整配置 ----------
 echo "=== 步骤 5/7：生成 .config ==="
