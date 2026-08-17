@@ -32,7 +32,7 @@ echo "=== 步骤 2/6：更新 feeds ==="
 
 # ---------- 3. 修复 radicale3 依赖 ----------
 echo "=== 步骤 3/6：修复 radicale3 依赖 ==="
-sed -i 's/+rpcd-mod-rad3-enc//g' feeds/luci.index
+sed -i 's/+rpcd-mod-rad3-enc//g' feeds/luci/applications/luci-app-radicale3/Makefile
 
 # ---------- 4. 生成完整配置 ----------
 echo "=== 步骤 4/6：生成 .config ==="
