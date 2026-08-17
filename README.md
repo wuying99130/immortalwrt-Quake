@@ -2,6 +2,33 @@
 
 # Project ImmortalWrt
 
+# ImmortalWrt NanoPi R1S-H3 云端编译
+
+## 使用方法
+
+1. Fork 本仓库
+2. 进入 **Actions** → 选择 **编译 ImmortalWrt NanoPi R1S-H3**
+3. 点击 **Run workflow**
+4. 选择版本分支，可选填额外软件包
+5. 等待编译完成（约 2-3 小时）
+6. 下载产物：Actions 页面 → Artifacts 或 Release
+
+## 产物
+
+- `immortalwrt-sunxi-cortexa7-friendlyarm_nanopi-r1-ext4-sdcard-YYYYMMDD.img`
+- `immortalwrt-sunxi-cortexa7-friendlyarm_nanopi-r1-squashfs-sdcard-YYYYMMDD.img`
+- `immortalwrt-sunxi-cortexa7-rootfs-YYYYMMDD.tar`
+- `build-info-YYYYMMDD.txt`
+
+## 写入 SD 卡
+
+```bash
+# ext4 版本
+dd if=immortalwrt-sunxi-cortexa7-friendlyarm_nanopi-r1-ext4-sdcard-YYYYMMDD.img of=/dev/sdX bs=4M status=progress
+
+# squashfs 版本
+dd if=immortalwrt-sunxi-cortexa7-friendlyarm_nanopi-r1-squashfs-sdcard-YYYYMMDD.img of=/dev/sdX bs=4M status=progress
+
 ImmortalWrt is a fork of [OpenWrt](https://openwrt.org), with more packages ported, more devices supported, default optimized profiles and localization modifications for mainland China users.<br/>
 Compared to upstream, we allow to use (non-upstreamable) modifications/hacks to provide better feature/performance/support.
 
