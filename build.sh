@@ -1,37 +1,74 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 # ============================================
 # ImmortalWrt 24.10 编译脚本
 # 目标：NanoPi R1S-H3 (sunxi/cortexa7)
 # ============================================
 
-REPO_URL="https://github.com/immortalwrt/immortalwrt"
-BRANCH="openwrt-24.10"
-BUILD_ROOT="$PWD/immortalwrt"
-WORK_DIR="$PWD"
-OUTPUT_DIR="$WORK_DIR/firmware-24.10-$(date +%Y%m%d)"
+readonly REPO_URL="https://github.com/immortalwrt/immortalwrt"
+readonly BRANCH="openwrt-24.10"
+readonly BUILD_ROOT="$PWD/immortalwrt"
+readonly WORK_DIR="$PWD"
+readonly OUTPUT_DIR="$WORK_DIR/firmware-24.10-$(date +%Y%m%d)"
+readonly JOBS="$(($(nproc) + 1))"
+readonly LOG_DIR="$WORK_DIR/logs"
+readonly BUILD_LOG="$LOG_DIR/build.log"
+readonly WARN_LOG="$LOG_DIR/warnings.log"
 
-# ---------- 1. 克隆源码 ----------
+# ---- 初始化 ----
+mkdir -p "$LOG_DIR"
+: > "$BUILD_LOG"
+: > "$WARN_LOG"
+
+echo ""
+echo "════════════════════════════════════════════════════════════════"
+echo "  ImmortalWrt 24.10 — NanoPi R1S-H3 编译"
+echo "  开始时间: $(date '+%Y-%m-%d %H:%M:%S')"
+echo "  并行数:   $JOBS"
+echo "  日志目录: $LOG_DIR"
+echo "════════════════════════════════════════════════════════════════"
+echo ""
+
+# ═══════════════════════════════════════════════════════════════
+#  步骤 1/7：获取源码
+# ═══════════════════════════════════════════════════════════════
+echo ""
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║  步骤 1/7：获取源码                                        ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
+echo ""
 if [ ! -d "$BUILD_ROOT" ]; then
-    echo "=== 克隆 ImmortalWrt 源码 ==="
     git clone --depth=1 -b "$BRANCH" "$REPO_URL" "$BUILD_ROOT"
 else
-    echo "=== 源码已存在，git pull 更新 ==="
     cd "$BUILD_ROOT"
-    git pull
+    git fetch origin "$BRANCH" --depth=1
+    git reset --hard "origin/$BRANCH"
     cd "$WORK_DIR"
 fi
-
 cd "$BUILD_ROOT"
+echo "  ✅ 完成"
 
-# ---------- 2. 更新 feeds ----------
-echo "=== 更新 feeds ==="
+# ═══════════════════════════════════════════════════════════════
+#  步骤 2/7：更新 feeds
+# ═══════════════════════════════════════════════════════════════
+echo ""
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║  步骤 2/7：更新 feeds                                      ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
+echo ""
 ./scripts/feeds update -a
 ./scripts/feeds install -a
+echo "  ✅ 完成"
 
-# ---------- 3. 修复 radicale3 依赖 ----------
-echo "=== 修复 radicale3 依赖 ==="
+# ═══════════════════════════════════════════════════════════════
+#  步骤 3/7：修复 radicale3 依赖
+# ═══════════════════════════════════════════════════════════════
+echo ""
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║  步骤 3/7：修复 radicale3 依赖                             ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
+echo ""
 mkdir -p package/feeds/luci/rpcd-mod-rad3-enc
 cat > package/feeds/luci/rpcd-mod-rad3-enc/Makefile << 'MAKEFILE_EOF'
 include $(TOPDIR)/rules.mk
@@ -61,55 +98,121 @@ endef
 
 $(eval $(call BuildPackage,rpcd-mod-rad3-enc))
 MAKEFILE_EOF
+echo "  ✅ 完成"
 
-# ---------- 4. 生成配置 ----------
-echo "=== 生成 .config ==="
-cat > .config << 'CONFIG_EOF'
-CONFIG_TARGET_sunxi=y
-CONFIG_TARGET_sunxi_cortexa7=y
-CONFIG_TARGET_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1s-h3=y
-CONFIG_PACKAGE_luci=y
-CONFIG_PACKAGE_luci-theme-argon=y
-CONFIG_PACKAGE_luci-app-radicale3=y
-CONFIG_PACKAGE_rpcd-mod-rad3-enc=y
-CONFIG_PACKAGE_yate=n
-CONFIG_EOF
-
-echo "=== 展开 defconfig ==="
-make defconfig
-
-# ---------- 5. 应用 DTS 补丁 ----------
-echo "=== 应用 DTS 补丁 ==="
+# ═══════════════════════════════════════════════════════════════
+#  步骤 4/7：应用 DTS 补丁
+# ═══════════════════════════════════════════════════════════════
+echo ""
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║  步骤 4/7：应用 DTS 补丁                                   ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
+echo ""
 DTS_PATCH="$WORK_DIR/patch-dts.sh"
 if [ -f "$DTS_PATCH" ]; then
     bash "$DTS_PATCH"
-    echo "✅ DTS 补丁已应用"
+    echo "  ✅ DTS 补丁已应用"
 else
-    echo "⚠️  patch-dts.sh 未找到: $DTS_PATCH"
-fi
-
-# ---------- 6. 编译 ----------
-echo "=== 开始编译 ==="
-set +e
-make -j8 2>&1 | grep -E "error:|warning:|Error|make\[" || true
-MAKE_EXIT=${PIPESTATUS[0]}
-set -e
-
-if [ $MAKE_EXIT -ne 0 ]; then
-    echo "=== 编译失败，输出详细日志 ==="
-    make -j1 V=s
+    echo "  ❌ patch-dts.sh 未找到: $DTS_PATCH"
     exit 1
 fi
 
-# ---------- 7. 收集产物 ----------
-echo "=== 收集固件 ==="
-mkdir -p "$OUTPUT_DIR"
-cp bin/targets/sunxi/cortexa7/*sdcard* "$OUTPUT_DIR/" 2>/dev/null || true
-cp bin/targets/sunxi/cortexa7/*.img.gz "$OUTPUT_DIR/" 2>/dev/null || true
+# ═══════════════════════════════════════════════════════════════
+#  步骤 5/7：生成 .config
+# ═══════════════════════════════════════════════════════════════
+echo ""
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║  步骤 5/7：生成 .config                                    ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
+echo ""
+if [ ! -f "$WORK_DIR/.config" ] || [ ! -s "$WORK_DIR/.config" ]; then
+    echo "  ❌ .config 文件缺失或为空"
+    exit 1
+fi
+cp "$WORK_DIR/.config" .config
+make defconfig
+echo "  ✅ 完成"
+
+# ═══════════════════════════════════════════════════════════════
+#  步骤 6/7：下载源码包
+# ═══════════════════════════════════════════════════════════════
+echo ""
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║  步骤 6/7：下载源码包                                      ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
+echo ""
+make download -j"$JOBS" || {
+    echo "  ⚠️ 部分下载失败，尝试重试..."
+    make download -j1 V=s
+}
+echo "  ✅ 完成"
+
+# ═══════════════════════════════════════════════════════════════
+#  步骤 7/7：编译
+# ═══════════════════════════════════════════════════════════════
+echo ""
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║  步骤 7/7：编译                                            ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
+echo ""
+echo "  详细日志: $BUILD_LOG"
+echo "  警告日志: $WARN_LOG"
+echo ""
+
+# 编译：完整日志写入文件，终端只显示 make 层级 + 警告/错误
+make -j"$JOBS" V=s 2>&1 | tee -a "$BUILD_LOG" | grep -E \
+    '^(make\[[0-9]\]|.*?(ERROR|Error|error:|WARNING|Warning|warning:|fatal|Failed|FAILED|undefined reference|No rule to make|No such file))' \
+
+    | tee -a "$WARN_LOG" || true
+
+MAKE_EXIT="${PIPESTATUS[0]}"
 
 echo ""
-echo "=========================================="
-echo "  编译完成！"
+
+# ---- 警告摘要 ----
+if [ -s "$WARN_LOG" ]; then
+    echo "─── 警告/错误摘要 ───"
+    cat "$WARN_LOG"
+    echo "──────────────────────"
+fi
+
+# ---- 编译失败处理 ----
+if [ "$MAKE_EXIT" -ne 0 ]; then
+    echo ""
+    echo "╔══════════════════════════════════════════════════════════════╗"
+    echo "║                      ❌ 编译失败                           ║"
+    echo "╚══════════════════════════════════════════════════════════════╝"
+    echo ""
+    echo "  退出码: $MAKE_EXIT"
+    echo ""
+    echo "─── 错误定位（最后 40 行）───"
+    grep -E '(Error |error:|ERROR|FAILED|fatal|undefined reference|No rule to make|No such file)' \
+        "$BUILD_LOG" | tail -40 || true
+    echo "──────────────────────────────"
+    echo ""
+    echo "  完整日志: $BUILD_LOG"
+    exit 1
+fi
+
+echo "  ✅ 编译完成"
+
+# ═══════════════════════════════════════════════════════════════
+#  收集固件
+# ═══════════════════════════════════════════════════════════════
+echo ""
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║  收集固件                                                  ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
+echo ""
+mkdir -p "$OUTPUT_DIR"
+cp -v bin/targets/sunxi/cortexa7/*sdcard* "$OUTPUT_DIR/" 2>/dev/null || true
+cp -v bin/targets/sunxi/cortexa7/*.img.gz "$OUTPUT_DIR/" 2>/dev/null || true
+
+echo ""
+echo "════════════════════════════════════════════════════════════════"
+echo "  ✅ 编译完成"
+echo "  结束时间: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "  固件目录: $OUTPUT_DIR"
-echo "=========================================="
+echo "════════════════════════════════════════════════════════════════"
+echo ""
 ls -lh "$OUTPUT_DIR/"
