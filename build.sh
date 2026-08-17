@@ -1,75 +1,131 @@
 #!/bin/bash
-set -euo pipefail
+set -e
 
-# ============================================
-# ImmortalWrt 24.10 编译脚本
-# 目标：NanoPi R1S-H3 (sunxi/cortexa7)
-# ============================================
+# ==========================================
+#  ImmortalWrt NanoPi R1S-H3 编译脚本
+#  用于 GitHub Actions 云端编译
+# ==========================================
 
-readonly REPO_URL="https://github.com/immortalwrt/immortalwrt"
-readonly BRANCH="openwrt-24.10"
-readonly BUILD_ROOT="$PWD/immortalwrt"
-readonly WORK_DIR="$PWD"
-readonly OUTPUT_DIR="$WORK_DIR/firmware-24.10-$(date +%Y%m%d)"
-readonly JOBS="$(($(nproc) + 1))"
+EXTRA_PACKAGES="$1"
 
-# ---------- 1. 克隆源码 ----------
-echo "=== 步骤 1/6：获取源码 ==="
-if [ ! -d "$BUILD_ROOT" ]; then
-    git clone --depth=1 -b "$BRANCH" "$REPO_URL" "$BUILD_ROOT"
-else
-    cd "$BUILD_ROOT"
-    git fetch origin "$BRANCH" --depth=1
-    git reset --hard "origin/$BRANCH"
-    cd "$WORK_DIR"
-fi
-cd "$BUILD_ROOT"
+TARGET="sunxi/cortexa7"
+DEVICE="friendlyarm_nanopi-r1s-h3"
+DATE_ONLY=$(date +%Y%m%d)
+BUILD_TIME=$(date '+%Y-%m-%d %H:%M:%S')
+OUTPUT_DIR="/tmp/immortalwrt/firmware-${DATE_ONLY}"
 
-# ---------- 2. 更新 feeds ----------
-echo "=== 步骤 2/6：更新 feeds ==="
+cd /tmp/immortalwrt
+
+# ---------- 更新 feeds ----------
+echo ">>> 更新 feeds"
 ./scripts/feeds update -a
 ./scripts/feeds install -a
 
-# ---------- 3. 修复 radicale3 依赖 ----------
-echo "=== 步骤 3/6：修复 radicale3 依赖 ==="
-sed -i 's/+rpcd-mod-rad3-enc//g' feeds/luci/applications/luci-app-radicale3/Makefile
+# ---------- 生成配置 ----------
+echo ">>> 生成 .config"
 
-# ---------- 4. 生成完整配置 ----------
-echo "=== 步骤 4/6：生成 .config ==="
-if [ ! -f "$WORK_DIR/.config" ] || [ ! -s "$WORK_DIR/.config" ]; then
-    echo "❌ .config 文件缺失或为空"
-    exit 1
+cat > .config << EOF
+CONFIG_TARGET_sunxi=y
+CONFIG_TARGET_sunxi_cortexa7=y
+CONFIG_TARGET_sunxi_cortexa7_DEVICE_${DEVICE}=y
+CONFIG_TARGET_ROOTFS_EXT4FS=y
+CONFIG_TARGET_ROOTFS_SQUASHFS=y
+CONFIG_TARGET_ROOTFS_TARGZ=y
+CONFIG_PACKAGE_luci=y
+CONFIG_PACKAGE_luci-ssl=y
+CONFIG_PACKAGE_luci-theme-argon=y
+CONFIG_PACKAGE_curl=y
+CONFIG_PACKAGE_wget=y
+CONFIG_PACKAGE_htop=y
+CONFIG_PACKAGE_iperf3=y
+CONFIG_PACKAGE_nano=y
+CONFIG_PACKAGE_tmux=y
+CONFIG_PACKAGE_luci-app-statistics=y
+CONFIG_PACKAGE_luci-app-upnp=y
+CONFIG_PACKAGE_luci-app-firewall=y
+CONFIG_PACKAGE_luci-app-nlbwmon=y
+EOF
+
+# 追加额外软件包
+if [ -n "$EXTRA_PACKAGES" ]; then
+    for pkg in $EXTRA_PACKAGES; do
+        echo "CONFIG_PACKAGE_${pkg}=y" >> .config
+    done
 fi
-cp "$WORK_DIR/.config" .config
+
 make defconfig
 
-# ---------- 5. 下载源码包 ----------
-echo "=== 步骤 5/6：下载源码包 ==="
-make download -j"$JOBS" || {
-    echo "⚠️ 部分下载失败，尝试重试..."
-    make download -j1 V=s
-}
+# ---------- 编译 ----------
+echo ""
+echo "=========================================="
+echo "  开始编译"
+echo "=========================================="
+echo ""
 
-# ---------- 6. 编译 ----------
-echo "=== 步骤 6/6：开始编译 (-j${JOBS}) ==="
-make -j"$JOBS" 2>&1 | tee "$WORK_DIR/build.log" || {
-    echo "=== 编译失败，输出详细日志（最后 200 行）==="
-    tail -200 "$WORK_DIR/build.log"
-    echo ""
-    echo "=== 重新编译（单线程 + 详细输出）==="
-    make -j1 V=s
-    exit 1
-}
+echo "[1/5] 下载源码包..."
+make download V=s 2>&1 | grep -E "^\+|error|warning|Error|Warning|fail|Fail" || true
+
+echo "[2/5] 编译工具链..."
+make tools/compile V=s -j$(nproc) 2>&1 | grep -E "^make\[[12]\]|error|warning|Error|Warning" || true
+
+echo "[3/5] 编译交叉工具链..."
+make toolchain/compile V=s -j$(nproc) 2>&1 | grep -E "^make\[[12]\]|error|warning|Error|Warning" || true
+
+echo "[4/5] 编译固件 (这步最久，耐心等待)..."
+make V=s -j$(nproc) 2>&1 | grep -E "^make\[[12]\]|error|warning|Error|Warning" || true
+
+echo "[5/5] 收集产物..."
 
 # ---------- 收集产物 ----------
-echo "=== 收集固件 ==="
 mkdir -p "$OUTPUT_DIR"
-cp -v bin/targets/sunxi/cortexa7/*sdcard* "$OUTPUT_DIR/" 2>/dev/null || true
-cp -v bin/targets/sunxi/cortexa7/*.img.gz "$OUTPUT_DIR/" 2>/dev/null || true
+
+# 格式1: ext4-sdcard 裸镜像
+EXT4_IMG=$(ls bin/targets/sunxi/cortexa7/*nanopi-r1*ext4-sdcard.img.gz 2>/dev/null | head -1)
+if [ -f "$EXT4_IMG" ]; then
+    gunzip -c "$EXT4_IMG" > "$OUTPUT_DIR/immortalwrt-sunxi-cortexa7-friendlyarm_nanopi-r1-ext4-sdcard-${DATE_ONLY}.img"
+    echo "✅ ext4-sdcard 镜像"
+fi
+
+# 格式2: squashfs-sdcard 裸镜像
+SQUASHFS_IMG=$(ls bin/targets/sunxi/cortexa7/*nanopi-r1*squashfs-sdcard.img.gz 2>/dev/null | head -1)
+if [ -f "$SQUASHFS_IMG" ]; then
+    gunzip -c "$SQUASHFS_IMG" > "$OUTPUT_DIR/immortalwrt-sunxi-cortexa7-friendlyarm_nanopi-r1-squashfs-sdcard-${DATE_ONLY}.img"
+    echo "✅ squashfs-sdcard 镜像"
+fi
+
+# 格式3: rootfs.tar
+ROOTFS_TAR=$(ls bin/targets/sunxi/cortexa7/*nanopi-r1*rootfs.tar.gz 2>/dev/null | head -1)
+if [ -f "$ROOTFS_TAR" ]; then
+    gunzip -c "$ROOTFS_TAR" > "$OUTPUT_DIR/immortalwrt-sunxi-cortexa7-rootfs-${DATE_ONLY}.tar"
+    echo "✅ rootfs.tar"
+fi
+
+# ---------- 编译信息 ----------
+cat > "$OUTPUT_DIR/build-info-${DATE_ONLY}.txt" << EOF
+============================================
+  ImmortalWrt NanoPi R1S-H3 编译信息
+============================================
+编译日期  : ${BUILD_TIME}
+目标平台  : ${TARGET}
+设备型号  : FriendlyARM NanoPi R1S-H3
+内核版本  : $(ls bin/targets/sunxi/cortexa7/ 2>/dev/null | grep -oP 'linux-\K[0-9.]+' | head -1 || echo "未检测到")
+
+--- 固件清单 ---
+$(ls -lh "$OUTPUT_DIR/" 2>/dev/null | grep -v build-info)
+
+--- 系统信息 ---
+Git 分支  : $(git branch --show-current 2>/dev/null || echo "N/A")
+Git 提交  : $(git rev-parse --short HEAD 2>/dev/null || echo "N/A")
+
+--- 已选软件包 ---
+$(grep -E '^CONFIG_PACKAGE_' .config 2>/dev/null | sort | sed 's/CONFIG_PACKAGE_/  - /' || echo "  无")
+
+--- 完整 .config ---
+$(cat .config 2>/dev/null || echo "  无")
+EOF
 
 echo ""
 echo "=========================================="
 echo "  编译完成！"
-echo "  固件目录: $OUTPUT_DIR"
 echo "=========================================="
 ls -lh "$OUTPUT_DIR/"
