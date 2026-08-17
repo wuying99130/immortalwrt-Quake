@@ -27,6 +27,8 @@ jobs:
     steps:
       - name: 检出仓库
         uses: actions/checkout@v4
+        with:
+          path: immortalwrt-Quake
 
       - name: 安装编译依赖
         run: |
@@ -48,7 +50,12 @@ jobs:
             https://github.com/immortalwrt/immortalwrt.git /tmp/immortalwrt
 
       - name: 复制编译脚本
-        run: cp build.sh /tmp/immortalwrt/
+        run: |
+          cp immortalwrt-Quake/build.sh /tmp/immortalwrt/
+
+      - name: 安装 DTS 文件
+        run: |
+          TARGET_DIR=/tmp/immortalwrt bash immortalwrt-Quake/patch-dts.sh
 
       - name: 运行编译
         run: |
