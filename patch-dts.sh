@@ -1,13 +1,26 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-echo "=== 查找/创建 NanoPi R1S-H3 DTS 文件 ==="
+echo "=== 创建 NanoPi R1S-H3 设备支持 ==="
 
-DTS_DIR="target/linux/sunxi/dts"
-DTS_FILE="${DTS_DIR}/sun8i-h3-nanopi-r1s-h3.dts"
+readonly DTS_DIR="target/linux/sunxi/dts"
+readonly DTS_FILE="${DTS_DIR}/sun8i-h3-nanopi-r1s-h3.dts"
+readonly DTSI_FILE="${DTS_DIR}/sun8i-h3-nanopi.dtsi"
+readonly MAKEFILE="target/linux/sunxi/image/cortex-a7.mk"
 
+# ---------- 1. 确保 dtsi 存在 ----------
+if [ ! -f "$DTSI_FILE" ]; then
+    echo "❌ $DTSI_FILE 不存在！"
+    echo "   ImmortalWrt 24.10 可能不包含 sun8i-h3-nanopi.dtsi。"
+    echo "   尝试从 sun8i-h3-nanopi-neo.dtsi 或手动创建。"
+    echo ""
+    echo "   请手动创建 $DTSI_FILE，内容参考 FriendlyARM NanoPi 系列。"
+    exit 1
+fi
+
+# ---------- 2. 创建 DTS ----------
 if [ ! -f "$DTS_FILE" ]; then
-    echo "=== DTS 文件不存在，正在创建 ==="
+    echo "创建 $DTS_FILE"
     mkdir -p "$DTS_DIR"
     cat > "$DTS_FILE" << 'DTS_EOF'
 /dts-v1/;
@@ -21,7 +34,6 @@ if [ ! -f "$DTS_FILE" ]; then
 	aliases {
 		serial0 = &uart0;
 		ethernet0 = &emac;
-		ethernet1 = &rtl8152;
 	};
 
 	chosen {
@@ -85,28 +97,29 @@ if [ ! -f "$DTS_FILE" ]; then
 	status = "okay";
 };
 DTS_EOF
-    echo "=== DTS 文件已创建 ==="
+    echo "✅ DTS 文件已创建"
 else
-    echo "=== DTS 文件已存在 ==="
+    echo "✅ DTS 文件已存在"
 fi
 
-MAKEFILE="target/linux/sunxi/image/cortex-a7.mk"
+# ---------- 3. 添加 Makefile 条目 ----------
 if ! grep -q "nanopi-r1s-h3" "$MAKEFILE" 2>/dev/null; then
-    echo "=== 添加 NanoPi R1S-H3 到 Makefile ==="
+    echo "添加 Device 定义到 $MAKEFILE"
     cat >> "$MAKEFILE" << 'MK_EOF'
 
 define Device/friendlyarm_nanopi-r1s-h3
 	DEVICE_VENDOR := FriendlyARM
 	DEVICE_MODEL := NanoPi R1S H3
 	DEVICE_DTS := sun8i-h3-nanopi-r1s-h3
-	SUPPORTED_DEVICES += friendlyarm,nanopi-r1s-h3
+	KERNEL_DEVICETREE := sun8i-h3-nanopi-r1s-h3
+	SUPPORTED_DEVICES := friendlyarm,nanopi-r1s-h3
 	DEVICE_PACKAGES := kmod-usb-net-rtl8152
 endef
 TARGET_DEVICES += friendlyarm_nanopi-r1s-h3
 MK_EOF
-    echo "=== Makefile 条目已添加 ==="
+    echo "✅ Makefile 条目已添加"
 else
-    echo "=== Makefile 条目已存在 ==="
+    echo "✅ Makefile 条目已存在"
 fi
 
 echo "=== DTS 补丁完成 ==="
