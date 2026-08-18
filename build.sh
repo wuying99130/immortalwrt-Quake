@@ -82,6 +82,13 @@ log_done "feeds 更新完成"
 next_step "生成编译配置 (.config)"
 cat > .config << 'EOF'
 # ==========================================
+# 禁用默认 profile（手写包作为唯一全部）
+# ==========================================
+CONFIG_TARGET_MULTI_PROFILE=n
+CONFIG_TARGET_PER_DEVICE_ROOTFS=y
+CONFIG_TARGET_DEFAULT_PACKAGES=""
+
+# ==========================================
 # Target: NanoPi R1S-H3 (Allwinner H3, sunxi/cortexa7)
 # ==========================================
 CONFIG_TARGET_sunxi=y
@@ -99,6 +106,7 @@ CONFIG_TARGET_ROOTFS_TARGZ=y
 CONFIG_PACKAGE_luci=y
 CONFIG_PACKAGE_luci-ssl=y
 CONFIG_PACKAGE_libustream-mbedtls=y
+CONFIG_PACKAGE_libustream-openssl=n
 CONFIG_PACKAGE_luci-base=y
 CONFIG_PACKAGE_luci-proto-ppp=y
 CONFIG_PACKAGE_luci-proto-ipv6=y
