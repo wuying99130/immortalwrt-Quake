@@ -2,7 +2,7 @@
 set -e
 
 # ============================================
-# ImmortalWrt 编译脚本 (简洁日志版)
+# ImmortalWrt 编译脚本 (精简日志版)
 # ============================================
 
 WORKDIR="/tmp/immortalwrt"
@@ -28,7 +28,9 @@ TOTAL=10
 next_step() {
     STEP=$((STEP + 1))
     echo ""
+    echo "=========================================="
     echo -e "${CYAN}[${STEP}/${TOTAL}]${NC} $1"
+    echo "=========================================="
 }
 
 echo ""
@@ -107,38 +109,67 @@ log_done ".config 写入完成"
 
 # ---- 5. defconfig ----
 next_step "展开默认配置 (make defconfig)"
-make defconfig > /dev/null 2>&1
+make defconfig
 log_done "defconfig 完成"
 
 # ---- 6. 下载源码 ----
 next_step "下载源码包 (make download)"
 log_prog "下载中，请耐心等待..."
 make download -j8
+log_sub "清理下载失败的空文件..."
+find dl -size -1024c -exec rm -f {} \;
 log_done "源码包下载完成"
 
 # ---- 7. 编译工具链 ----
 next_step "编译工具链 (make tools/install)"
 log_prog "编译中..."
-make tools/install -j$(nproc) V=s
+make tools/install -j$(nproc)
 log_done "工具链编译完成"
 
 # ---- 8. 编译交叉工具链 ----
 next_step "编译交叉工具链 (make toolchain/install)"
 log_prog "编译中..."
-make toolchain/install -j$(nproc) V=s
+make toolchain/install -j$(nproc)
 log_done "交叉工具链编译完成"
 
 # ---- 9. 编译固件 ----
 next_step "编译固件 (make)"
 log_prog "编译固件，耗时较长，请耐心等待..."
-make -j$(nproc) V=s
+echo "=== 开始编译 ==="
+make -j$(nproc) || make -j1 V=s
 log_done "固件编译完成"
 
 # ---- 10. 输出 ----
 next_step "生成产物"
 log_sub "查找生成的固件..."
-find bin/targets/bcm27xx/bcm2711/ -maxdepth 1 -type f \( -name "*.img.gz" -o -name "*.manifest" -o -name "*.buildinfo" \) \
-    -exec ls -lh {} \;
+echo "=== 正在精准提取固件 ==="
+BUILD_DATE=$(date +%Y%m%d)
+
+mkdir -p bin/out
+for file in bin/targets/bcm27xx/bcm2711/*.img.gz; do
+    if [ -f "$file" ]; then
+        filename=$(basename "$file")
+        new_filename="immortalwrt-bcm27xx-bcm2711-rpi-4-${BUILD_DATE}.img.gz"
+        cp -f "$file" "bin/out/$new_filename"
+        echo "已重命名镜像: $filename -> $new_filename"
+    fi
+done
+
+for file in bin/targets/bcm27xx/bcm2711/*rootfs.tar.gz; do
+    if [ -f "$file" ]; then
+        filename=$(basename "$file")
+        new_filename="immortalwrt-bcm27xx-bcm2711-rootfs-${BUILD_DATE}.tar.gz"
+        cp -f "$file" "bin/out/$new_filename"
+        echo "已提取 Docker 容器包: $filename -> $new_filename"
+    fi
+done
+
+if [ -f "bin/targets/bcm27xx/bcm2711/sha256sums" ]; then
+    cp -f bin/targets/bcm27xx/bcm2711/sha256sums bin/out/
+fi
+
+echo "=== 打包输出目录清单 ==="
+ls -lh bin/out/
 log_done "产物就绪"
 
 # ---- 汇总 ----
@@ -153,7 +184,8 @@ printf "  %-20s : %s\n" "管理界面" "中文 (zh-cn)"
 printf "  %-20s : %s\n" "SSH 工具" "openssh-sftp-server"
 printf "  %-20s : %s\n" "USB 存储" "ext4/vfat/exfat/ntfs3"
 printf "  %-20s : %s\n" "插件" "Samba/UPnP/统计/负载/WireGuard"
+printf "  %-20s : %s\n" "固件目录" "bin/out/"
 echo "=========================================="
 echo ""
-log_done "全部完成! 固件位于 bin/targets/bcm27xx/bcm2711/"
+log_done "全部完成! 固件位于 bin/out/"
 echo ""
