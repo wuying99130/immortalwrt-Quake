@@ -30,6 +30,28 @@ jobs:
         with:
           path: immortalwrt-Quake
 
+      # ================================
+      # 释放磁盘空间（保留必要目录）
+      # ================================
+      - name: 释放磁盘空间
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          sudo docker image prune -af || true
+
+      # ================================
+      # dl 缓存（极大提升稳定性）
+      # ================================
+      - name: 缓存 dl 目录
+        uses: actions/cache@v4
+        with:
+          path: /tmp/immortalwrt/dl
+          key: immortalwrt-dl-${{ inputs.version }}
+          restore-keys: |
+            immortalwrt-dl-
+
+      # ================================
+      # 安装编译依赖（不替换源）
+      # ================================
       - name: 安装编译依赖
         run: |
           sudo apt-get update
@@ -39,30 +61,40 @@ jobs:
             python3-pip unzip wget zlib1g-dev file rsync \
             subversion swig libelf-dev time curl xz-utils
 
-      - name: 释放磁盘空间
-        run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
-          sudo docker image prune -af || true
-
+      # ================================
+      # 克隆 ImmortalWrt 源码
+      # ================================
       - name: 克隆 ImmortalWrt 源码
         run: |
           git clone --depth=1 --branch "${{ inputs.version }}" \
             https://github.com/immortalwrt/immortalwrt.git /tmp/immortalwrt
 
+      # ================================
+      # 复制编译脚本
+      # ================================
       - name: 复制编译脚本
         run: |
           cp immortalwrt-Quake/build.sh /tmp/immortalwrt/
 
+      # ================================
+      # 安装 DTS 文件（避免重复写入）
+      # ================================
       - name: 安装 DTS 文件
         run: |
           TARGET_DIR=/tmp/immortalwrt bash immortalwrt-Quake/patch-dts.sh
 
+      # ================================
+      # 运行编译（保留你的逻辑）
+      # ================================
       - name: 运行编译
         run: |
           cd /tmp/immortalwrt
           chmod +x build.sh
           bash build.sh "${{ inputs.packages }}"
 
+      # ================================
+      # 上传固件
+      # ================================
       - name: 上传固件
         uses: actions/upload-artifact@v4
         with:
@@ -70,6 +102,9 @@ jobs:
           path: /tmp/immortalwrt/firmware-*/
           retention-days: 7
 
+      # ================================
+      # 创建 Release
+      # ================================
       - name: 创建 Release
         if: success()
         uses: softprops/action-gh-release@v2
