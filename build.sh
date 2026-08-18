@@ -135,7 +135,7 @@ CONFIG_PACKAGE_wireless-regdb=y
 # ==========================================
 # 网络基础
 # ==========================================
-CONFIG_PACKAGE_dnsmasq=y
+CONFIG_PACKAGE_dnsmasq-full=y
 CONFIG_PACKAGE_firewall4=y
 CONFIG_PACKAGE_nftables=y
 CONFIG_PACKAGE_ppp=y
