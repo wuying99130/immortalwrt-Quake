@@ -23,7 +23,7 @@ log_skip()    { echo -e "    ◌ $1 (跳过)"; }
 
 # 步骤计数
 STEP=0
-TOTAL=9
+TOTAL=10
 next_step() {
     STEP=$((STEP + 1))
     echo ""
@@ -38,7 +38,23 @@ echo "  分支: openwrt-24.10"
 echo "  时间: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "=========================================="
 
-# ---- 1. 检查环境 ----
+# ---- 1. 安装编译依赖 ----
+next_step "安装编译依赖"
+log_prog "换清华源（解决云端 azure 源不通）..."
+sudo sed -i 's|http://azure.archive.ubuntu.com|https://mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
+sudo sed -i 's|http://archive.ubuntu.com|https://mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
+sudo sed -i 's|https://archive.ubuntu.com|https://mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
+log_sub "更新源..."
+sudo apt update
+log_sub "安装依赖包..."
+sudo apt install -y build-essential clang flex bison g++ gawk \
+gcc-multilib g++-multilib gettext git libfuse-dev libncurses5-dev \
+libssl-dev python3 python3-dev python3-pip python3-setuptools \
+rsync unzip zlib1g-dev file wget subversion patch upx-ucl \
+autoconf automake libtool
+log_done "编译依赖安装完成"
+
+# ---- 2. 检查环境 ----
 next_step "检查编译环境"
 log_sub "工作目录: $WORKDIR"
 
@@ -51,7 +67,7 @@ else
     log_done "源码克隆完成"
 fi
 
-# ---- 2. 更新 feeds ----
+# ---- 3. 更新 feeds ----
 next_step "更新 feeds"
 log_sub "更新 feeds 源..."
 ./scripts/feeds update -a
@@ -59,7 +75,7 @@ log_sub "安装 feeds 包..."
 ./scripts/feeds install -a
 log_done "feeds 更新完成"
 
-# ---- 3. 写入 .config ----
+# ---- 4. 写入 .config ----
 next_step "生成编译配置 (.config)"
 cat > .config << 'EOF'
 CONFIG_TARGET_bcm27xx=y
@@ -88,36 +104,36 @@ CONFIG_PACKAGE_luci-app-wireguard=y
 EOF
 log_done ".config 写入完成"
 
-# ---- 4. defconfig ----
+# ---- 5. defconfig ----
 next_step "展开默认配置 (make defconfig)"
 make defconfig > /dev/null 2>&1
 log_done "defconfig 完成"
 
-# ---- 5. 下载源码 ----
+# ---- 6. 下载源码 ----
 next_step "下载源码包 (make download)"
 log_prog "下载中，请耐心等待..."
 make download -j8
 log_done "源码包下载完成"
 
-# ---- 6. 编译工具链 ----
+# ---- 7. 编译工具链 ----
 next_step "编译工具链 (make tools/install)"
 log_prog "编译中..."
 make tools/install -j$(nproc) V=s
 log_done "工具链编译完成"
 
-# ---- 7. 编译交叉工具链 ----
+# ---- 8. 编译交叉工具链 ----
 next_step "编译交叉工具链 (make toolchain/install)"
 log_prog "编译中..."
 make toolchain/install -j$(nproc) V=s
 log_done "交叉工具链编译完成"
 
-# ---- 8. 编译固件 ----
+# ---- 9. 编译固件 ----
 next_step "编译固件 (make)"
 log_prog "编译固件，耗时较长，请耐心等待..."
 make -j$(nproc) V=s
 log_done "固件编译完成"
 
-# ---- 9. 输出 ----
+# ---- 10. 输出 ----
 next_step "生成产物"
 log_sub "查找生成的固件..."
 find bin/targets/bcm27xx/bcm2711/ -maxdepth 1 -type f \( -name "*.img.gz" -o -name "*.manifest" -o -name "*.buildinfo" \) \
