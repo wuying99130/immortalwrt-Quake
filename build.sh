@@ -5,7 +5,8 @@ set -e
 # ImmortalWrt 编译脚本 (简洁日志版)
 # ============================================
 
-WORKDIR="/home/0xlight/immortalwrt"
+WORKDIR="/tmp/immortalwrt"
+mkdir -p "$WORKDIR"
 cd "$WORKDIR"
 
 # 颜色
