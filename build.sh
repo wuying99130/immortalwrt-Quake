@@ -36,7 +36,7 @@ next_step() {
 echo ""
 echo "=========================================="
 echo "  ImmortalWrt 编译脚本"
-echo "  目标: Raspberry Pi 4B"
+echo "  目标: NanoPi R1S-H3 (Allwinner H3)"
 echo "  分支: openwrt-24.10"
 echo "  时间: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "=========================================="
@@ -81,29 +81,87 @@ log_done "feeds 更新完成"
 # ---- 4. 写入 .config ----
 next_step "生成编译配置 (.config)"
 cat > .config << 'EOF'
-CONFIG_TARGET_bcm27xx=y
-CONFIG_TARGET_bcm27xx_bcm2711=y
-CONFIG_TARGET_bcm27xx_bcm2711_DEVICE_rpi-4=y
+# ==========================================
+# Target: NanoPi R1S-H3 (Allwinner H3, sunxi/cortexa7)
+# ==========================================
+CONFIG_TARGET_sunxi=y
+CONFIG_TARGET_sunxi_cortexa7=y
+CONFIG_TARGET_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1s-h3=y
+
+# RootFS
+CONFIG_TARGET_ROOTFS_EXT4FS=y
+CONFIG_TARGET_ROOTFS_SQUASHFS=y
+CONFIG_TARGET_ROOTFS_TARGZ=y
+
+# ==========================================
+# LuCI Web 管理
+# ==========================================
 CONFIG_PACKAGE_luci=y
 CONFIG_PACKAGE_luci-ssl=y
+CONFIG_PACKAGE_libustream-mbedtls=y
+CONFIG_PACKAGE_luci-base=y
+CONFIG_PACKAGE_luci-proto-ppp=y
+CONFIG_PACKAGE_luci-proto-ipv6=y
+
+# ==========================================
+# 主题
+# ==========================================
 CONFIG_PACKAGE_luci-theme-argon=y
-CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
-CONFIG_PACKAGE_openssh-sftp-server=y
-CONFIG_PACKAGE_curl=y
-CONFIG_PACKAGE_wget=y
-CONFIG_PACKAGE_htop=y
-CONFIG_PACKAGE_iperf3=y
-CONFIG_PACKAGE_kmod-usb-storage=y
+
+# ==========================================
+# USB 内核模块
+# ==========================================
+CONFIG_PACKAGE_kmod-usb2=y
+CONFIG_PACKAGE_kmod-usb-ohci=y
+CONFIG_PACKAGE_kmod-usb-ehci=y
+CONFIG_PACKAGE_kmod-usb-net=y
+CONFIG_PACKAGE_kmod-usb-net-rtl8152=y
+
+# ==========================================
+# WiFi (BCM43430 / AP6212)
+# ==========================================
+CONFIG_PACKAGE_kmod-brcmfmac=y
+CONFIG_PACKAGE_brcmfmac-firmware-43430-sdio=y
+
+# ==========================================
+# 无线工具
+# ==========================================
+CONFIG_PACKAGE_hostapd=y
+CONFIG_PACKAGE_wpa-supplicant=y
+CONFIG_PACKAGE_wpad-basic=y
+CONFIG_PACKAGE_iw=y
+CONFIG_PACKAGE_wireless-regdb=y
+
+# ==========================================
+# 网络基础
+# ==========================================
+CONFIG_PACKAGE_dnsmasq=y
+CONFIG_PACKAGE_firewall4=y
+CONFIG_PACKAGE_nftables=y
+CONFIG_PACKAGE_ppp=y
+CONFIG_PACKAGE_ppp-mod-pppoe=y
+CONFIG_PACKAGE_ip-full=y
+CONFIG_PACKAGE_iptables-nft=y
+
+# ==========================================
+# IPv6
+# ==========================================
+CONFIG_PACKAGE_ip6tables-nft=y
+
+# ==========================================
+# 工具
+# ==========================================
+CONFIG_PACKAGE_bash=y
+CONFIG_PACKAGE_coreutils=y
+CONFIG_PACKAGE_block-mount=y
+
+# ==========================================
+# 文件系统支持
+# ==========================================
 CONFIG_PACKAGE_kmod-fs-ext4=y
 CONFIG_PACKAGE_kmod-fs-vfat=y
-CONFIG_PACKAGE_kmod-fs-exfat=y
-CONFIG_PACKAGE_kmod-fs-ntfs3=y
-CONFIG_PACKAGE_block-mount=y
-CONFIG_PACKAGE_luci-app-samba4=y
-CONFIG_PACKAGE_luci-app-upnp=y
-CONFIG_PACKAGE_luci-app-statistics=y
-CONFIG_PACKAGE_luci-app-nlbwmon=y
-CONFIG_PACKAGE_luci-app-wireguard=y
+CONFIG_PACKAGE_kmod-nls-cp437=y
+CONFIG_PACKAGE_kmod-nls-iso8859-1=y
 EOF
 log_done ".config 写入完成"
 
@@ -155,26 +213,26 @@ echo "=== 正在精准提取固件 ==="
 BUILD_DATE=$(date +%Y%m%d)
 
 mkdir -p bin/out
-for file in bin/targets/bcm27xx/bcm2711/*.img.gz; do
+for file in bin/targets/sunxi/cortexa7/*.img.gz; do
     if [ -f "$file" ]; then
         filename=$(basename "$file")
-        new_filename="immortalwrt-bcm27xx-bcm2711-rpi-4-${BUILD_DATE}.img.gz"
+        new_filename="immortalwrt-sunxi-cortexa7-nanopi-r1s-h3-${BUILD_DATE}.img.gz"
         cp -f "$file" "bin/out/$new_filename"
         echo "已重命名镜像: $filename -> $new_filename"
     fi
 done
 
-for file in bin/targets/bcm27xx/bcm2711/*rootfs.tar.gz; do
+for file in bin/targets/sunxi/cortexa7/*rootfs.tar.gz; do
     if [ -f "$file" ]; then
         filename=$(basename "$file")
-        new_filename="immortalwrt-bcm27xx-bcm2711-rootfs-${BUILD_DATE}.tar.gz"
+        new_filename="immortalwrt-sunxi-cortexa7-rootfs-${BUILD_DATE}.tar.gz"
         cp -f "$file" "bin/out/$new_filename"
-        echo "已提取 Docker 容器包: $filename -> $new_filename"
+        echo "已提取 rootfs 包: $filename -> $new_filename"
     fi
 done
 
-if [ -f "bin/targets/bcm27xx/bcm2711/sha256sums" ]; then
-    cp -f bin/targets/bcm27xx/bcm2711/sha256sums bin/out/
+if [ -f "bin/targets/sunxi/cortexa7/sha256sums" ]; then
+    cp -f bin/targets/sunxi/cortexa7/sha256sums bin/out/
 fi
 
 echo "=== 打包输出目录清单 ==="
@@ -187,12 +245,12 @@ echo "=========================================="
 echo "          编译汇总"
 echo "=========================================="
 printf "  %-20s : %s\n" "源码分支" "openwrt-24.10"
-printf "  %-20s : %s\n" "目标设备" "Raspberry Pi 4B"
+printf "  %-20s : %s\n" "目标设备" "NanoPi R1S-H3 (Allwinner H3)"
+printf "  %-20s : %s\n" "目标平台" "sunxi/cortexa7"
 printf "  %-20s : %s\n" "LuCI 主题" "Argon"
-printf "  %-20s : %s\n" "管理界面" "中文 (zh-cn)"
-printf "  %-20s : %s\n" "SSH 工具" "openssh-sftp-server"
-printf "  %-20s : %s\n" "USB 存储" "ext4/vfat/exfat/ntfs3"
-printf "  %-20s : %s\n" "插件" "Samba/UPnP/统计/负载/WireGuard"
+printf "  %-20s : %s\n" "WiFi" "BCM43430 (brcmfmac)"
+printf "  %-20s : %s\n" "USB 网络" "RTL8152"
+printf "  %-20s : %s\n" "文件系统" "ext4/squashfs/targz"
 printf "  %-20s : %s\n" "固件目录" "bin/out/"
 echo "=========================================="
 echo ""
