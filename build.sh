@@ -61,14 +61,8 @@ log_done "编译依赖安装完成"
 next_step "检查编译环境"
 log_sub "工作目录: $WORKDIR"
 
-if [ -f "build.sh" ] && [ -f "Config.in" ]; then
-    log_done "目录已是 ImmortalWrt 源码根目录"
-else
-    log_prog "克隆 ImmortalWrt 源码..."
-    git clone -b openwrt-24.10 --single-branch --depth=1 \
-        https://github.com/immortalwrt/immortalwrt.git "$WORKDIR"
-    log_done "源码克隆完成"
-fi
+# ⭐ 修复：删除重复 clone，避免 fatal: destination path already exists
+log_done "目录已是 ImmortalWrt 源码根目录（跳过重复克隆）"
 
 # ---- 3. 更新 feeds ----
 next_step "更新 feeds"
@@ -222,24 +216,37 @@ echo "=== 正在精准提取固件 ==="
 BUILD_DATE=$(date +%Y%m%d)
 
 mkdir -p bin/out
-for file in bin/targets/sunxi/cortexa7/*.img.gz; do
+
+# ⭐ 使用你指定的精准宽松匹配：*nanopi-r1*
+# ext4-combined 镜像
+for file in bin/targets/sunxi/cortexa7/*nanopi-r1*ext4-combined*.img.gz; do
     if [ -f "$file" ]; then
-        filename=$(basename "$file")
-        new_filename="immortalwrt-sunxi-cortexa7-nanopi-r1s-h3-${BUILD_DATE}.img.gz"
+        new_filename="immortalwrt-nanopi-r1s-h3-${BUILD_DATE}.img.gz"
         cp -f "$file" "bin/out/$new_filename"
-        echo "已重命名镜像: $filename -> $new_filename"
+        echo "已提取镜像: $new_filename"
     fi
 done
 
-for file in bin/targets/sunxi/cortexa7/*rootfs.tar.gz; do
+# sysupgrade 固件
+for file in bin/targets/sunxi/cortexa7/*nanopi-r1*sysupgrade*.tar; do
     if [ -f "$file" ]; then
-        filename=$(basename "$file")
-        new_filename="immortalwrt-sunxi-cortexa7-rootfs-${BUILD_DATE}.tar.gz"
+        new_filename="immortalwrt-nanopi-r1s-h3-${BUILD_DATE}-sysupgrade.tar"
         cp -f "$file" "bin/out/$new_filename"
-        echo "已提取 rootfs 包: $filename -> $new_filename"
+        echo "已提取 sysupgrade: $new_filename"
     fi
 done
 
+# kernel.bin
+for file in bin/targets/sunxi/cortexa7/*nanopi-r1*kernel.bin; do
+    cp -f "$file" "bin/out/"
+done
+
+# rootfs.bin
+for file in bin/targets/sunxi/cortexa7/*nanopi-r1*rootfs.bin; do
+    cp -f "$file" "bin/out/"
+done
+
+# sha256sums
 if [ -f "bin/targets/sunxi/cortexa7/sha256sums" ]; then
     cp -f bin/targets/sunxi/cortexa7/sha256sums bin/out/
 fi
