@@ -106,17 +106,43 @@ log_done "交叉工具链编译完成"
 # ---- 9. 编译固件 ----
 next_step "编译固件 (make)"
 log_prog "编译固件，耗时较长，请耐心等待..."
-echo "=== 开始编译（静默并行，失败时自动切换到详细模式） ==="
-if make -j$(nproc) > /dev/null 2>&1; then
+
+BUILD_LOG="/tmp/build.log"
+BUILD_FAILED=0
+
+echo "=== 开始编译（精简输出，只显示关键步骤） ==="
+
+# 只编译一次：输出实时过滤只显示大条目，完整日志写入临时文件
+make -j$(nproc) 2>&1 | tee "$BUILD_LOG" | grep -E "(^make\[|^  CC |^  LD |^  AR |^  LINK |^  INSTALL |^  PACKAGE|error:|warning:|Error |ERROR)" || BUILD_FAILED=1
+
+# 用 PIPESTATUS 取管道第一个命令（make）的真实退出码，而非 grep 的
+if [ ${PIPESTATUS[0]} -ne 0 ]; then
+    BUILD_FAILED=1
+fi
+
+if [ "$BUILD_FAILED" -eq 0 ]; then
     log_done "固件编译完成"
 else
     echo ""
     echo "=========================================="
-    echo "   并行编译失败，切换到详细模式重试..."
+    echo "   编译失败，以下是错误详情"
     echo "=========================================="
     echo ""
-    make -j1 V=s
-    log_done "固件编译完成（详细模式）"
+
+    # 从完整日志中捞出错误行及其上下文（前后各 5 行）
+    grep -n -i "error\|Error\|ERROR" "$BUILD_LOG" | head -20 | while IFS=: read -r line_num _; do
+        start=$((line_num - 5))
+        end=$((line_num + 5))
+        [ $start -lt 1 ] && start=1
+        echo "--- 错误附近 (行 ${line_num}) ---"
+        sed -n "${start},${end}p" "$BUILD_LOG"
+        echo ""
+    done
+
+    echo "=========================================="
+    echo "   完整编译日志已保存到: $BUILD_LOG"
+    echo "=========================================="
+    exit 1
 fi
 
 # ---- 10. 输出 ----
