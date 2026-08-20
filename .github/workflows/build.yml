@@ -70,11 +70,12 @@ jobs:
             immortalwrt-dl-
 
       # ================================
-      # 复制编译脚本（.config 内嵌在 build.sh 中，无需额外复制）
+      # 复制编译脚本和 .config
       # ================================
-      - name: 复制编译脚本
+      - name: 复制编译脚本和 .config
         run: |
           cp immortalwrt-Quake/build.sh /tmp/immortalwrt/
+          cp immortalwrt-Quake/.config /tmp/immortalwrt/
 
       # ================================
       # 安装 DTS 文件（避免重复写入）
