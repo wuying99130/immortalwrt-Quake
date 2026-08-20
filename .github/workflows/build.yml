@@ -39,17 +39,6 @@ jobs:
           sudo docker image prune -af || true
 
       # ================================
-      # dl 缓存（极大提升稳定性）
-      # ================================
-      - name: 缓存 dl 目录
-        uses: actions/cache@v4
-        with:
-          path: /tmp/immortalwrt/dl
-          key: immortalwrt-dl-${{ inputs.version }}
-          restore-keys: |
-            immortalwrt-dl-
-
-      # ================================
       # 安装编译依赖（不替换源）
       # ================================
       - name: 安装编译依赖
@@ -68,6 +57,17 @@ jobs:
         run: |
           git clone --depth=1 --branch "${{ inputs.version }}" \
             https://github.com/immortalwrt/immortalwrt.git /tmp/immortalwrt
+
+      # ================================
+      # dl 缓存（极大提升稳定性）
+      # ================================
+      - name: 缓存 dl 目录
+        uses: actions/cache@v4
+        with:
+          path: /tmp/immortalwrt/dl
+          key: immortalwrt-dl-${{ inputs.version }}
+          restore-keys: |
+            immortalwrt-dl-
 
       # ================================
       # 复制编译脚本
