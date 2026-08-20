@@ -173,14 +173,10 @@ for file in bin/targets/sunxi/cortexa7/*nanopi-r1*sysupgrade*.tar; do
 done
 
 # kernel.bin
-for file in bin/targets/sunxi/cortexa7/*nanopi-r1*kernel.bin; do
-    cp -f "$file" "bin/out/"
-done
+find bin/targets/sunxi/cortexa7 -maxdepth 1 -name '*nanopi-r1*kernel.bin' -exec cp -f {} bin/out/ \; 2>/dev/null || true
 
 # rootfs.bin
-for file in bin/targets/sunxi/cortexa7/*nanopi-r1*rootfs.bin; do
-    cp -f "$file" "bin/out/"
-done
+find bin/targets/sunxi/cortexa7 -maxdepth 1 -name '*nanopi-r1*rootfs.bin' -exec cp -f {} bin/out/ \; 2>/dev/null || true
 
 # sha256sums
 if [ -f "bin/targets/sunxi/cortexa7/sha256sums" ]; then
