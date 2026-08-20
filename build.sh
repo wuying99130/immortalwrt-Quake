@@ -61,7 +61,7 @@ log_done "编译依赖安装完成"
 next_step "检查编译环境"
 log_sub "工作目录: $WORKDIR"
 
-# ⭐ 修复：删除重复 clone，避免 fatal: destination path already exists
+#  修复：删除重复 clone，避免 fatal: destination path already exists
 log_done "目录已是 ImmortalWrt 源码根目录（跳过重复克隆）"
 
 # ---- 3. 更新 feeds ----
@@ -74,98 +74,8 @@ log_done "feeds 更新完成"
 
 # ---- 4. 写入 .config ----
 next_step "生成编译配置 (.config)"
-cat > .config << 'EOF'
-# ==========================================
-# 禁用默认 profile（手写包作为唯一全部）
-# ==========================================
-CONFIG_TARGET_MULTI_PROFILE=n
-CONFIG_TARGET_PER_DEVICE_ROOTFS=y
-CONFIG_TARGET_DEFAULT_PACKAGES=""
-
-# ==========================================
-# Target: NanoPi R1S-H3 (Allwinner H3, sunxi/cortexa7)
-# ==========================================
-CONFIG_TARGET_sunxi=y
-CONFIG_TARGET_sunxi_cortexa7=y
-CONFIG_TARGET_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1s-h3=y
-
-# RootFS
-CONFIG_TARGET_ROOTFS_EXT4FS=y
-CONFIG_TARGET_ROOTFS_SQUASHFS=y
-CONFIG_TARGET_ROOTFS_TARGZ=y
-
-# ==========================================
-# LuCI Web 管理
-# ==========================================
-CONFIG_PACKAGE_luci=y
-CONFIG_PACKAGE_luci-ssl=y
-CONFIG_PACKAGE_libustream-mbedtls=y
-CONFIG_PACKAGE_libustream-openssl=n
-CONFIG_PACKAGE_luci-base=y
-CONFIG_PACKAGE_luci-proto-ppp=y
-CONFIG_PACKAGE_luci-proto-ipv6=y
-
-# ==========================================
-# 主题
-# ==========================================
-CONFIG_PACKAGE_luci-theme-argon=y
-
-# ==========================================
-# USB 内核模块
-# ==========================================
-CONFIG_PACKAGE_kmod-usb2=y
-CONFIG_PACKAGE_kmod-usb-ohci=y
-CONFIG_PACKAGE_kmod-usb-ehci=y
-CONFIG_PACKAGE_kmod-usb-net=y
-CONFIG_PACKAGE_kmod-usb-net-rtl8152=y
-
-# ==========================================
-# WiFi (BCM43430 / AP6212)
-# ==========================================
-CONFIG_PACKAGE_kmod-brcmfmac=y
-CONFIG_PACKAGE_brcmfmac-firmware-43430-sdio=y
-
-# ==========================================
-# 无线工具
-# ==========================================
-CONFIG_PACKAGE_hostapd=y
-CONFIG_PACKAGE_wpa-supplicant=y
-CONFIG_PACKAGE_wpad-basic=y
-CONFIG_PACKAGE_iw=y
-CONFIG_PACKAGE_wireless-regdb=y
-
-# ==========================================
-# 网络基础（轻量稳定）
-# ==========================================
-CONFIG_PACKAGE_dnsmasq=y
-CONFIG_PACKAGE_dnsmasq-full=n
-CONFIG_PACKAGE_firewall4=y
-CONFIG_PACKAGE_nftables=y
-CONFIG_PACKAGE_ppp=y
-CONFIG_PACKAGE_ppp-mod-pppoe=y
-CONFIG_PACKAGE_ip-full=y
-CONFIG_PACKAGE_iptables-nft=y
-
-# ==========================================
-# IPv6
-# ==========================================
-CONFIG_PACKAGE_ip6tables-nft=y
-
-# ==========================================
-# 工具
-# ==========================================
-CONFIG_PACKAGE_bash=y
-CONFIG_PACKAGE_coreutils=y
-CONFIG_PACKAGE_block-mount=y
-
-# ==========================================
-# 文件系统支持
-# ==========================================
-CONFIG_PACKAGE_kmod-fs-ext4=y
-CONFIG_PACKAGE_kmod-fs-vfat=y
-CONFIG_PACKAGE_kmod-nls-cp437=y
-CONFIG_PACKAGE_kmod-nls-iso8859-1=y
-EOF
+# [已删除] 删除了原有的 cat > .config << 'EOF' ... EOF 代码块
+# [作用] 防止脚本内部硬编码的配置覆盖掉 Actions 流程中复制进来的完整 .config 文件
 log_done ".config 写入完成"
 
 # ---- 5. defconfig ----
@@ -202,7 +112,7 @@ if make -j$(nproc) > /dev/null 2>&1; then
 else
     echo ""
     echo "=========================================="
-    echo "  ⚠ 并行编译失败，切换到详细模式重试..."
+    echo "   并行编译失败，切换到详细模式重试..."
     echo "=========================================="
     echo ""
     make -j1 V=s
@@ -217,7 +127,7 @@ BUILD_DATE=$(date +%Y%m%d)
 
 mkdir -p bin/out
 
-# ⭐ 使用你指定的精准宽松匹配：*nanopi-r1*
+#  使用你指定的精准宽松匹配：*nanopi-r1*
 # ext4-combined 镜像
 for file in bin/targets/sunxi/cortexa7/*nanopi-r1*ext4-combined*.img.gz; do
     if [ -f "$file" ]; then
