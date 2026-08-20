@@ -99,7 +99,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: immortalwrt-nanopi-r1s-h3-${{ github.run_id }}
-          path: /tmp/immortalwrt/firmware-*/
+          path: /tmp/immortalwrt/bin/out/*
           retention-days: 7
 
       # ================================
@@ -111,7 +111,7 @@ jobs:
         with:
           tag_name: build-${{ github.run_id }}
           name: ImmortalWrt NanoPi R1S-H3 - ${{ github.run_id }}
-          files: /tmp/immortalwrt/firmware-*/*
+          files: /tmp/immortalwrt/bin/out/*
           body: |
             ## 编译信息
             - **分支**: `${{ inputs.version }}`
