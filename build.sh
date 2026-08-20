@@ -92,7 +92,7 @@ log_sub "交叉工具链编译完成"
 log_done "阶段一完成，环境就绪"
 
 # ============================================
-# 阶段二：编译固件（单独展示，目录级进度）
+# 阶段二：编译固件（精简目录级进度）
 # ============================================
 echo ""
 echo "=========================================="
@@ -105,10 +105,9 @@ echo ""
 BUILD_LOG="/tmp/build.log"
 BUILD_FAILED=0
 
-# 输出实时过滤：显示 make 目录级进度 + 错误/警告
-make -j$(nproc) 2>&1 | tee "$BUILD_LOG" | grep -E "(^make\[|error:|warning:|Error |ERROR)" || BUILD_FAILED=1
+# 显示 make[N] 目录级进度 + 所有异常（错误/警告/fatal/未定义引用等）
+make -j$(nproc) 2>&1 | tee "$BUILD_LOG" | grep -E "(^make\[|error:|warning:|Error |ERROR|WARNING|fatal:|undefined|FAILED)" || BUILD_FAILED=1
 
-# 用 PIPESTATUS 取管道第一个命令（make）的真实退出码，而非 grep 的
 if [ ${PIPESTATUS[0]} -ne 0 ]; then
     BUILD_FAILED=1
 fi
@@ -122,8 +121,6 @@ else
     echo "   编译失败，以下是错误详情"
     echo "=========================================="
     echo ""
-
-    # 从完整日志中捞出错误行及其上下文（前后各 5 行）
     grep -n -i "error\|Error\|ERROR" "$BUILD_LOG" | head -20 | while IFS=: read -r line_num _; do
         start=$((line_num - 5))
         end=$((line_num + 5))
@@ -132,9 +129,8 @@ else
         sed -n "${start},${end}p" "$BUILD_LOG"
         echo ""
     done
-
     echo "=========================================="
-    echo "   完整编译日志已保存到: $BUILD_LOG"
+    echo "   完整编译日志: $BUILD_LOG"
     echo "=========================================="
     exit 1
 fi
