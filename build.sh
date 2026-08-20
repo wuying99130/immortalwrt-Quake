@@ -74,8 +74,59 @@ log_done "feeds 更新完成"
 
 # ---- 4. 写入 .config ----
 next_step "生成编译配置 (.config)"
-# [已删除] 删除了原有的 cat > .config << 'EOF' ... EOF 代码块
-# [作用] 防止脚本内部硬编码的配置覆盖掉 Actions 流程中复制进来的完整 .config 文件
+cat > .config << 'EOF'
+# ============================================
+# ImmortalWrt NanoPi R1S-H3 编译配置
+# 目标设备: NanoPi R1S-H3 (Allwinner H3)
+# 分支: openwrt-24.10
+# ============================================
+
+# ---- 目标平台 ----
+CONFIG_TARGET_sunxi=y
+CONFIG_TARGET_sunxi_cortexa7=y
+CONFIG_TARGET_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1s-h3=y
+
+# ---- 基础系统 ----
+CONFIG_PACKAGE_luci=y
+CONFIG_PACKAGE_luci-ssl=y
+CONFIG_PACKAGE_luci-ssl-openssl=y
+
+# ---- LuCI 主题 ----
+CONFIG_PACKAGE_luci-theme-argon=y
+
+# ---- WiFi 驱动 (BCM43430) ----
+CONFIG_PACKAGE_brcmfmac-firmware-43430a0-sdio=y
+CONFIG_PACKAGE_kmod-brcmfmac=y
+CONFIG_PACKAGE_kmod-brcmutil=y
+
+# ---- USB 网络驱动 ----
+CONFIG_PACKAGE_kmod-usb-net=y
+CONFIG_PACKAGE_kmod-usb-net-rtl8152=y
+
+# ---- 文件系统 ----
+CONFIG_TARGET_ROOTFS_EXT4FS=y
+CONFIG_TARGET_ROOTFS_SQUASHFS=y
+CONFIG_TARGET_ROOTFS_TARGZ=y
+
+# ---- 实用工具 ----
+CONFIG_PACKAGE_htop=y
+CONFIG_PACKAGE_bash=y
+CONFIG_PACKAGE_curl=y
+CONFIG_PACKAGE_wget=y
+CONFIG_PACKAGE_nano=y
+CONFIG_PACKAGE_coreutils=y
+
+# ---- 网络工具 ----
+CONFIG_PACKAGE_iperf3=y
+CONFIG_PACKAGE_tcpdump=y
+CONFIG_PACKAGE_kmod-tun=y
+CONFIG_PACKAGE_wireguard-tools=y
+
+# ---- 中文支持 ----
+CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
+CONFIG_PACKAGE_luci-i18n-opkg-zh-cn=y
+CONFIG_PACKAGE_luci-i18n-firewall-zh-cn=y
+EOF
 log_done ".config 写入完成"
 
 # ---- 5. defconfig ----
