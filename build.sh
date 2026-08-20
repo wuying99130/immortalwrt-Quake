@@ -153,35 +153,48 @@ BUILD_DATE=$(date +%Y%m%d)
 
 mkdir -p bin/out
 
-#  使用你指定的精准宽松匹配：*nanopi-r1*
-# ext4-combined 镜像
-for file in bin/targets/sunxi/cortexa7/*nanopi-r1*ext4-combined*.img.gz; do
+# 提取：用最简洁的 *nanopi-r1* 匹配，然后重命名输出
+# ext4-sdcard 镜像
+for file in bin/targets/sunxi/cortexa7/*nanopi-r1*ext4-sdcard*.img.gz; do
     if [ -f "$file" ]; then
-        new_filename="immortalwrt-nanopi-r1s-h3-${BUILD_DATE}.img.gz"
+        filename=$(basename "$file")
+        new_filename=$(echo "$filename" | sed 's/^openwrt-/immortalwrt-/' | sed 's/nanopi-r1s-h3/nanopi-r1/' | sed "s/\.img\.gz$/-${BUILD_DATE}.img.gz/")
         cp -f "$file" "bin/out/$new_filename"
-        echo "已提取镜像: $new_filename"
+        echo "已提取: $new_filename"
     fi
 done
 
-# sysupgrade 固件
-for file in bin/targets/sunxi/cortexa7/*nanopi-r1*sysupgrade*.tar; do
+# squashfs-sdcard 镜像
+for file in bin/targets/sunxi/cortexa7/*nanopi-r1*squashfs-sdcard*.img.gz; do
     if [ -f "$file" ]; then
-        new_filename="immortalwrt-nanopi-r1s-h3-${BUILD_DATE}-sysupgrade.tar"
+        filename=$(basename "$file")
+        new_filename=$(echo "$filename" | sed 's/^openwrt-/immortalwrt-/' | sed 's/nanopi-r1s-h3/nanopi-r1/' | sed "s/\.img\.gz$/-${BUILD_DATE}.img.gz/")
         cp -f "$file" "bin/out/$new_filename"
-        echo "已提取 sysupgrade: $new_filename"
+        echo "已提取: $new_filename"
     fi
 done
 
-# kernel.bin
-find bin/targets/sunxi/cortexa7 -maxdepth 1 -name '*nanopi-r1*kernel.bin' -exec cp -f {} bin/out/ \; 2>/dev/null || true
-
-# rootfs.bin
-find bin/targets/sunxi/cortexa7 -maxdepth 1 -name '*nanopi-r1*rootfs.bin' -exec cp -f {} bin/out/ \; 2>/dev/null || true
+# rootfs.tar.gz
+for file in bin/targets/sunxi/cortexa7/*nanopi-r1*rootfs*.tar.gz; do
+    if [ -f "$file" ]; then
+        filename=$(basename "$file")
+        new_filename=$(echo "$filename" | sed 's/^openwrt-/immortalwrt-/' | sed 's/nanopi-r1s-h3/nanopi-r1/' | sed "s/\.tar\.gz$/-${BUILD_DATE}.tar.gz/")
+        cp -f "$file" "bin/out/$new_filename"
+        echo "已提取: $new_filename"
+    fi
+done
 
 # sha256sums
 if [ -f "bin/targets/sunxi/cortexa7/sha256sums" ]; then
     cp -f bin/targets/sunxi/cortexa7/sha256sums bin/out/
 fi
+
+# 编译信息
+echo "=== 编译信息 ===" > bin/out/build-info.txt
+echo "分支: openwrt-24.10" >> bin/out/build-info.txt
+echo "目标: NanoPi R1S-H3 (sunxi/cortexa7)" >> bin/out/build-info.txt
+echo "日期: $(date '+%Y-%m-%d %H:%M:%S')" >> bin/out/build-info.txt
+cp -f .config bin/out/config.buildinfo 2>/dev/null || true
 
 echo "=== 打包输出目录清单 ==="
 ls -lh bin/out/
