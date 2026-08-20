@@ -120,6 +120,7 @@ log_sub ".config 写入完成"
 # ---- 5. defconfig ----
 log_prog "展开默认配置..."
 make defconfig
+echo "CONFIG_TARGET_uboot-sunxi=n" >> .config
 log_sub "defconfig 完成"
 
 # ---- 6. 下载源码 ----
