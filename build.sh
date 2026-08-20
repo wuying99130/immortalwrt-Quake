@@ -60,62 +60,13 @@ log_prog "更新 feeds..."
 ./scripts/feeds install -a
 log_sub "feeds 更新完成"
 
-# ---- 4. 写入 .config ----
-log_prog "写入 .config..."
-cat > .config << 'EOF'
-# ============================================
-# ImmortalWrt NanoPi R1S-H3 编译配置
-# 目标设备: NanoPi R1S-H3 (Allwinner H3)
-# 分支: openwrt-24.10
-# ============================================
-
-# ---- 目标平台 ----
-CONFIG_TARGET_sunxi=y
-CONFIG_TARGET_sunxi_cortexa7=y
-CONFIG_TARGET_sunxi_cortexa7_DEVICE_friendlyarm_nanopi-r1s-h3=y
-
-# ---- 基础系统 ----
-CONFIG_PACKAGE_luci=y
-CONFIG_PACKAGE_luci-ssl=y
-CONFIG_PACKAGE_luci-ssl-openssl=y
-
-# ---- LuCI 主题 ----
-CONFIG_PACKAGE_luci-theme-argon=y
-
-# ---- WiFi 驱动 (BCM43430) ----
-CONFIG_PACKAGE_brcmfmac-firmware-43430a0-sdio=y
-CONFIG_PACKAGE_kmod-brcmfmac=y
-CONFIG_PACKAGE_kmod-brcmutil=y
-
-# ---- USB 网络驱动 ----
-CONFIG_PACKAGE_kmod-usb-net=y
-CONFIG_PACKAGE_kmod-usb-net-rtl8152=y
-
-# ---- 文件系统 ----
-CONFIG_TARGET_ROOTFS_EXT4FS=y
-CONFIG_TARGET_ROOTFS_SQUASHFS=y
-CONFIG_TARGET_ROOTFS_TARGZ=y
-
-# ---- 实用工具 ----
-CONFIG_PACKAGE_htop=y
-CONFIG_PACKAGE_bash=y
-CONFIG_PACKAGE_curl=y
-CONFIG_PACKAGE_wget=y
-CONFIG_PACKAGE_nano=y
-CONFIG_PACKAGE_coreutils=y
-
-# ---- 网络工具 ----
-CONFIG_PACKAGE_iperf3=y
-CONFIG_PACKAGE_tcpdump=y
-CONFIG_PACKAGE_kmod-tun=y
-CONFIG_PACKAGE_wireguard-tools=y
-
-# ---- 中文支持 ----
-CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
-CONFIG_PACKAGE_luci-i18n-opkg-zh-cn=y
-CONFIG_PACKAGE_luci-i18n-firewall-zh-cn=y
-EOF
-log_sub ".config 写入完成"
+# ---- 4. 确认 .config ----
+log_prog "确认 .config..."
+if [ ! -f .config ]; then
+    echo "错误: 缺少 .config，请检查 CI 是否已复制"
+    exit 1
+fi
+log_sub ".config 就绪（仓库版本，路径: $PWD/.config）"
 
 # ---- 5. defconfig ----
 log_prog "展开默认配置..."
