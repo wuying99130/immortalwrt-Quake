@@ -170,10 +170,13 @@ for file in bin/targets/sunxi/cortexa7/*nanopi-r1*squashfs-sdcard*.img.gz; do
 done
 
 # rootfs.tar.gz
-for file in bin/targets/sunxi/cortexa7/*nanopi-r1*rootfs*.tar.gz; do
+# 修改点：将匹配模式从 *nanopi-r1*rootfs*.tar.gz 改为 *rootfs*.tar.gz
+# 原因：通用的 rootfs 包文件名通常不包含具体的设备型号（如 nanopi-r1）
+for file in bin/targets/sunxi/cortexa7/*rootfs*.tar.gz; do
     if [ -f "$file" ]; then
         filename=$(basename "$file")
-        new_filename=$(echo "$filename" | sed 's/^openwrt-/immortalwrt-/' | sed 's/nanopi-r1s-h3/nanopi-r1/' | sed "s/\.tar\.gz$/-${BUILD_DATE}.tar.gz/")
+        # 修改点：移除了 sed 's/nanopi-r1s-h3/nanopi-r1/'，因为文件名中本来就没有设备型号
+        new_filename=$(echo "$filename" | sed 's/^openwrt-/immortalwrt-/' | sed "s/\.tar\.gz$/-${BUILD_DATE}.tar.gz/")
         cp -f "$file" "bin/out/$new_filename"
         echo "已提取: $new_filename"
     fi
