@@ -1,4 +1,4 @@
-name: Build ImmortalWrt NanoPi R1
+name: Build ImmortalWrt NanoPi R1S-H3
 
 on:
   workflow_dispatch:
@@ -33,6 +33,11 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
+      - name: 应用 DTS 硬件补丁
+        run: |
+          chmod +x patch-dts.sh
+          TARGET_DIR="." ./patch-dts.sh
+
       - name: 应用配置与预检
         run: |
           # 确保根目录的 .config 生效
@@ -51,5 +56,5 @@ jobs:
       - name: 上传编译产物
         uses: actions/upload-artifact@v4
         with:
-          name: immortalwrt-nanopi-r1-firmware
+          name: immortalwrt-nanopi-r1s-h3-firmware
           path: bin/out/*
