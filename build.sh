@@ -54,19 +54,19 @@ log_prog "正在提取并规范化固件产物..."
 BUILD_DATE=$(date +%Y%m%d)
 mkdir -p bin/out
 
-# ext4 镜像
+# ext4 镜像（使用 *nanopi-r1* 确保宽泛命中，重命名为 nanopi-r1s-h3）
 for file in bin/targets/sunxi/cortexa7/*nanopi-r1*ext4-sdcard*.img.gz; do
     if [ -f "$file" ]; then
-        new_filename="immortalwrt-sunxi-cortexa7-friendlyarm_nanopi-r1-ext4-sdcard-${BUILD_DATE}.img.gz"
+        new_filename="immortalwrt-sunxi-cortexa7-friendlyarm_nanopi-r1s-h3-ext4-sdcard-${BUILD_DATE}.img.gz"
         cp -f "$file" "bin/out/$new_filename"
         echo "已生成: $new_filename"
     fi
 done
 
-# squashfs 镜像
+# squashfs 镜像（使用 *nanopi-r1* 确保宽泛命中，重命名为 nanopi-r1s-h3）
 for file in bin/targets/sunxi/cortexa7/*nanopi-r1*squashfs-sdcard*.img.gz; do
     if [ -f "$file" ]; then
-        new_filename="immortalwrt-sunxi-cortexa7-friendlyarm_nanopi-r1-squashfs-sdcard-${BUILD_DATE}.img.gz"
+        new_filename="immortalwrt-sunxi-cortexa7-friendlyarm_nanopi-r1s-h3-squashfs-sdcard-${BUILD_DATE}.img.gz"
         cp -f "$file" "bin/out/$new_filename"
         echo "已生成: $new_filename"
     fi
