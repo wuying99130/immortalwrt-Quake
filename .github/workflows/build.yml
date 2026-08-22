@@ -46,6 +46,7 @@ jobs:
             echo "错误: 缺少 .config 文件！"
             exit 1
           fi
+          # 放在 Feeds 安装之后运行，确保第三方插件配置顺利通过校验不被洗掉
           make defconfig
 
       - name: 执行核心编译脚本
