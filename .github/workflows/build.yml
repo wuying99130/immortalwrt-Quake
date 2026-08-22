@@ -31,7 +31,8 @@ jobs:
       - name: 更新和安装 Feeds
         run: |
           ./scripts/feeds update -a
-          ./scripts/feeds install -a
+          # 加上 -f 参数，允许第三方源强制覆盖重复的官方源
+          ./scripts/feeds install -f -a
 
       - name: 应用 DTS 硬件补丁
         run: |
