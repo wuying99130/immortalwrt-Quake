@@ -4,6 +4,8 @@
 
 # ImmortalWrt NanoPi R1S-H3 云端编译
 
+这是最基础的版本，不包含任何插件
+
 ## 使用方法
 
 1. Fork 本仓库
